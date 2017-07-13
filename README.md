@@ -58,11 +58,14 @@ extra-deps:
 * Tip: use `ghc-options: -dedupe -O2` to reduce size of resulted JS blob.
 * Tip: for production use Google Closure compiler with settings:
 ``` bash
+# Copy application JS blob
 cp $(stack path --local-install-root)/bin/<packagename>.jsexe/{all.js,all.js.externs} .
-cp ../aol-invoice-server/static/jquery-1.9.1.js .
-cp ../aol-invoice-server/static/bootstrap/js/bootstrap.min.js .
-cp ../aol-invoice-server/static/bootstrap/js/material.min.js .
-cp ../aol-invoice-server/static/bootstrap/js/ripples.min.js .
+# Copy all raw JS dependencies to not let optimizer to break your code
+cp ../<packagename>-server/static/jquery-1.9.1.js .
+cp ../<packagename>-server/static/bootstrap/js/bootstrap.min.js .
+cp ../<packagename>-server/static/bootstrap/js/material.min.js .
+cp ../<packagename>-server/static/bootstrap/js/ripples.min.js .
+# Compile with aggressive optimizations and turned off duplicate/undefined errors
 ccjs all.js --compilation_level=ADVANCED_OPTIMIZATIONS \
   --externs=node \
   --externs=all.js.externs \
