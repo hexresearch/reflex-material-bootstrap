@@ -1,0 +1,79 @@
+name:                reflex-material-bootstrap
+version:             0.1.0.0
+synopsis:            Frontend library for reactive bootstrap with material skin
+description:         Please see README.md
+homepage:            https://github.com/hexresearch/reports-manager
+author:              Anton Gushcha
+maintainer:          ncrashed@gmail.com
+license:             MIT
+copyright:           2017 Anton Gushcha
+category:            Web
+build-type:          Simple
+cabal-version:       >=1.10
+extra-source-files:
+  README.md
+  CHANGELOG.md
+
+library
+  hs-source-dirs:      src
+  exposed-modules:
+    Web.Reflex.Bootstrap
+    Web.Reflex.Bootstrap.Context
+    Web.Reflex.Bootstrap.Focus
+    Web.Reflex.Bootstrap.Form
+    Web.Reflex.Bootstrap.Markup
+    Web.Reflex.Bootstrap.Menu
+    Web.Reflex.Bootstrap.Modal
+    Web.Reflex.Bootstrap.Pagination
+    Web.Reflex.Bootstrap.Progress
+    Web.Reflex.Bootstrap.Router
+    Web.Reflex.Bootstrap.Table
+    Web.Reflex.Bootstrap.Tabs
+    Web.Reflex.Bootstrap.Tooltip
+    Web.Reflex.Bootstrap.Upload.Input
+    Web.Reflex.Bootstrap.Utils
+  default-language:    Haskell2010
+  build-depends:
+      base                    >= 4.7   && < 5
+    , aeson                   >= 0.11  && < 1.3
+    , bytestring              >= 0.10  && < 0.11
+    , containers              >= 0.5.7 && < 0.6
+    , data-default            >= 0.7   && < 0.8
+    , dependent-map           >= 0.2   && < 0.3
+    , either                  >= 4.4   && < 4.5
+    , extra                   >= 1.5   && < 1.6
+    , ghcjs-base              >= 0.2   && < 0.3
+    , ghcjs-dom               >= 0.2   && < 0.10
+    , lens                    >= 4.14  && < 4.16
+    , reflex                  >= 0.5   && < 0.6
+    , reflex-dom              >= 0.4   && < 0.5
+    , safe                    >= 0.3   && < 0.4
+    , text                    >= 1.2   && < 1.3
+    , time                    >= 1.6   && < 1.7
+
+  default-extensions:
+    BangPatterns
+    DataKinds
+    DeriveFunctor
+    DeriveGeneric
+    FlexibleContexts
+    FlexibleInstances
+    FunctionalDependencies
+    GADTs
+    KindSignatures
+    LambdaCase
+    MultiWayIf
+    OverloadedLists
+    OverloadedStrings
+    RankNTypes
+    RecordWildCards
+    RecursiveDo
+    ScopedTypeVariables
+    TupleSections
+    TypeFamilies
+    TypeOperators
+    TypeSynonymInstances
+
+source-repository head
+  type:     git
+  location: https://github.com/hexresearch/reflex-material-bootstrap

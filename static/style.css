@@ -1,0 +1,17 @@
+.control-label {
+  font-size: 20px !important;
+  margin-top: 0px !important;
+}
+
+.form-control {
+  margin-bottom: 5px !important;
+}
+
+.modal .modal-dialog {
+  width: 80%;
+}
+
+.modal-content {
+  padding-left: 20px;
+  padding-right: 20px;
+}
