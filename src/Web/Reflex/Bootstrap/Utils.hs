@@ -14,6 +14,7 @@ module Web.Reflex.Bootstrap.Utils(
   , printTimestamp
   , widgetHoldDyn
   , mergeDynamic
+  , delayPostBuild
   ) where
 
 import Control.Monad
@@ -114,3 +115,10 @@ mergeDynamic :: forall t m a . MonadWidget t m => Dynamic t a -> Dynamic t a -> 
 mergeDynamic d1 d2 = do
   v0 <- sample . current $ d1
   holdDyn v0 $ leftmost [updated d1, updated d2]
+
+-- | Break recursive dependency on value at build by replacing it with known default. Change back to current value of
+-- dynamic after building.
+delayPostBuild :: forall t m a . MonadWidget t m => a -> Dynamic t a -> m (Dynamic t a)
+delayPostBuild defVal d = do
+  buildE <- getPostBuild
+  holdDyn defVal $ leftmost [updated d, d `tagPromptlyDyn` buildE]

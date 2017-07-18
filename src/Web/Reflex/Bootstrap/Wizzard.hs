@@ -1,9 +1,11 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE NoMonomorphismRestriction #-}
 module Web.Reflex.Bootstrap.Wizzard(
     WizzardGraph(..)
   , WizzardStep(..)
   , wizzardStepName
   , wizzardStepBody
+  , WizzardControlPos(..)
   , WizzardConfig(..)
   , wizzardConfigNextLabel
   , wizzardConfigBackLabel
@@ -16,6 +18,7 @@ import Data.Default
 import Data.Maybe
 import Data.Monoid
 import Data.Text (Text)
+import GHC.Generics
 import Reflex.Dom
 
 import Web.Reflex.Bootstrap.Markup
@@ -40,10 +43,15 @@ data WizzardStep t m a = WizzardStep {
 }
 makeLenses ''WizzardStep
 
+-- | Defines available position for control elements of wizzard
+data WizzardControlPos = WizzardControlTop | WizzardControlBottom
+  deriving (Generic, Eq, Ord, Enum, Bounded, Show, Read)
+
 -- | Global configuration for wizzard widget
 data WizzardConfig = WizzardConfig {
-  _wizzardConfigNextLabel :: Text -- ^ Label for Next button
-, _wizzardConfigBackLabel :: Text -- ^ Label for Prev button
+  _wizzardConfigNextLabel  :: Text -- ^ Label for Next button
+, _wizzardConfigBackLabel  :: Text -- ^ Label for Prev button
+, _wizzardConfigControlPos :: WizzardControlPos -- ^ Define position for control (Next and Back) buttons
 }
 makeLenses ''WizzardConfig
 
@@ -51,58 +59,76 @@ instance Default WizzardConfig where
   def = WizzardConfig {
       _wizzardConfigNextLabel = "Next"
     , _wizzardConfigBackLabel = "Back"
+    , _wizzardConfigControlPos = WizzardControlBottom
     }
+
+-- | Shortcut for intrnal state of wizzard's pill
+type PillData t m a = (Text, m (Event t a, Route t m (Event t a)))
 
 -- | Create wizzard from given wizzard step DSL, fire event on last screen with
 -- result of last widget.
 wizzard :: forall t m a . MonadWidget t m => WizzardConfig -> WizzardGraph t m () a -> m (Event t a)
 wizzard WizzardConfig{..} = fmap switchPromptlyDyn . route . wizzard' [] ()
   where
-    wizzard' :: forall b c . [(Text, m (Event t c, Route t m (Event t c)))] -> b -> WizzardGraph t m b c -> m (Event t c, Route t m (Event t c))
-    wizzard' steps curV (WizzardSingle mkStep) = do
+    wizzard' :: forall b c . [PillData t m c] -> b -> WizzardGraph t m b c -> m (Event t c, Route t m (Event t c))
+    wizzard' steps curV curGraph@(WizzardSingle mkStep) = do
       let step = mkStep curV
-      pillsRoute <- wizzardHeader steps (_wizzardStepName step)
-      (curValD, manualNextE) <- el "div" $ _wizzardStepBody step Nothing
-      backRoute <- case steps of
-        [] -> pure . Route $ never
-        _ -> do
-          let (_, mr) = last steps
-          e <- primaryButton _wizzardConfigBackLabel
-          pure . Route $ const mr <$> e
-      nextE <- primaryRightButtonDisable _wizzardConfigNextLabel $ isJust <$> curValD
+          curName = _wizzardStepName step
+      pillsRoute <- wizzardHeader steps curName
+      (nextE, backRoute, manualNextE, curValD) <- case _wizzardConfigControlPos of
+        WizzardControlTop -> mdo
+          (backRoute, nextE) <- wizzardControls steps curValD
+          (curValD, manualNextE) <- el "div" $ _wizzardStepBody step Nothing
+          pure (nextE, backRoute, manualNextE, curValD)
+        WizzardControlBottom -> do
+          (curValD, manualNextE) <- el "div" $ _wizzardStepBody step Nothing
+          (backRoute, nextE) <- wizzardControls steps curValD
+          pure (nextE, backRoute, manualNextE, curValD)
       let nextValE = leftmost [
               fmapMaybe id (current curValD `tag` nextE)
             , manualNextE
             ]
       pure (nextValE, pillsRoute <> backRoute)
-
     wizzard' steps curV curGraph@(WizzardChain mkStep graph) = do
       let step = mkStep curV
           curName = _wizzardStepName step
       pillsRoute <- wizzardHeader steps curName
-      (curValD, manualNextE) <- el "div" $ _wizzardStepBody step Nothing
-      backRoute <- case steps of
-        [] -> pure . Route $ never
-        _ -> do
-          let (_, mr) = last steps
-          e <- primaryButton _wizzardConfigBackLabel
-          pure . Route $ const mr <$> e
-      nextE <- primaryRightButtonDisable _wizzardConfigNextLabel $ isJust <$> curValD
+      (nextE, backRoute, manualNextE, curValD) <- case _wizzardConfigControlPos of
+        WizzardControlTop -> mdo
+          (backRoute, nextE) <- wizzardControls steps curValD
+          (curValD, manualNextE) <- el "div" $ _wizzardStepBody step Nothing
+          pure (nextE, backRoute, manualNextE, curValD)
+        WizzardControlBottom -> do
+          (curValD, manualNextE) <- el "div" $ _wizzardStepBody step Nothing
+          (backRoute, nextE) <- wizzardControls steps curValD
+          pure (nextE, backRoute, manualNextE, curValD)
       let nextValE = leftmost [
               fmapMaybe id (current curValD `tag` nextE)
             , manualNextE
             ]
-          myPill v = (curName, wizzard' steps curV curGraph)
+      let myPill v = (curName, wizzard' steps curV curGraph)
           nextRoute = Route $ (\v -> wizzard' (steps ++ [myPill v]) v graph) <$> nextValE
       pure (never, nextRoute <> pillsRoute <> backRoute)
 
-    wizzardHeader :: [(Text, m (c, Route t m c))] -> Text -> m (Route t m c)
+    wizzardHeader :: [PillData t m c] -> Text -> m (Route t m (Event t c))
     wizzardHeader is curItem = elClass "ul" "nav nav-pills" $ do
       allr <- forM is $ \(name, mr) -> do
         e <- li . href . text $ name
         pure . Route $ const mr <$> e
       _ <- liClass "active" . href . text $ curItem
       pure $ mconcat allr
+
+    wizzardControls :: [PillData t m c] -> Dynamic t (Maybe d) -> m (Route t m (Event t c), Event t ())
+    wizzardControls steps curValD = do
+      backRoute <- case steps of
+        [] -> pure . Route $ never
+        _ -> do
+          let (_, mr) = last steps
+          e <- primaryButton _wizzardConfigBackLabel
+          pure . Route $ const mr <$> e
+      curValD' <- delayPostBuild Nothing curValD
+      nextE <- primaryRightButtonDisable _wizzardConfigNextLabel $ isJust <$> curValD'
+      pure (backRoute, nextE)
 
 -- | Primary button with disable flag
 primaryRightButtonDisable :: MonadWidget t m => Text -> Dynamic t Bool -> m (Event t ())
