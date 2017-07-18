@@ -15,6 +15,7 @@ module Web.Reflex.Bootstrap.Wizzard(
 import Control.Lens
 import Control.Monad
 import Data.Default
+import Data.Dynamic (Typeable, toDyn, fromDynamic)
 import Data.Maybe
 import Data.Monoid
 import Data.Text (Text)
@@ -25,13 +26,15 @@ import Web.Reflex.Bootstrap.Markup
 import Web.Reflex.Bootstrap.Router
 import Web.Reflex.Bootstrap.Utils
 
+import qualified Data.Dynamic as D
+
 -- | Allowed ways to compose wizzard steps. Allows only list-like graph for
 -- wizzard.
 data WizzardGraph t m a b where
   -- | Last (or the least) step of wizzard step
-  WizzardSingle :: (a -> WizzardStep t m b) -> WizzardGraph t m a b
+  WizzardSingle :: Typeable b => (a -> WizzardStep t m b) -> WizzardGraph t m a b
   -- | Chain steps in wizzard
-  WizzardChain :: (a -> WizzardStep t m c) -> WizzardGraph t m c b -> WizzardGraph t m a b
+  WizzardChain :: Typeable c => (a -> WizzardStep t m c) -> WizzardGraph t m c b -> WizzardGraph t m a b
 
 -- | Descrption of widget step
 data WizzardStep t m a = WizzardStep {
@@ -68,20 +71,20 @@ type PillData t m a = (Text, m (Event t a, Route t m (Event t a)))
 -- | Create wizzard from given wizzard step DSL, fire event on last screen with
 -- result of last widget.
 wizzard :: forall t m a . MonadWidget t m => WizzardConfig -> WizzardGraph t m () a -> m (Event t a)
-wizzard WizzardConfig{..} = fmap switchPromptlyDyn . route . wizzard' [] ()
+wizzard WizzardConfig{..} = fmap switchPromptlyDyn . route . wizzard' [] () Nothing
   where
-    wizzard' :: forall b c . [PillData t m c] -> b -> WizzardGraph t m b c -> m (Event t c, Route t m (Event t c))
-    wizzard' steps curV curGraph@(WizzardSingle mkStep) = do
+    wizzard' :: forall b c . [PillData t m c] -> b -> Maybe D.Dynamic -> WizzardGraph t m b c -> m (Event t c, Route t m (Event t c))
+    wizzard' steps curV mstate curGraph@(WizzardSingle mkStep) = do
       let step = mkStep curV
           curName = _wizzardStepName step
       pillsRoute <- wizzardHeader steps curName
       (nextE, backRoute, manualNextE, curValD) <- case _wizzardConfigControlPos of
         WizzardControlTop -> mdo
           (backRoute, nextE) <- wizzardControls steps curValD
-          (curValD, manualNextE) <- el "div" $ _wizzardStepBody step Nothing
+          (curValD, manualNextE) <- el "div" $ _wizzardStepBody step $ join $ fmap fromDynamic mstate
           pure (nextE, backRoute, manualNextE, curValD)
         WizzardControlBottom -> do
-          (curValD, manualNextE) <- el "div" $ _wizzardStepBody step Nothing
+          (curValD, manualNextE) <- el "div" $ _wizzardStepBody step $ join $ fmap fromDynamic mstate
           (backRoute, nextE) <- wizzardControls steps curValD
           pure (nextE, backRoute, manualNextE, curValD)
       let nextValE = leftmost [
@@ -89,25 +92,25 @@ wizzard WizzardConfig{..} = fmap switchPromptlyDyn . route . wizzard' [] ()
             , manualNextE
             ]
       pure (nextValE, pillsRoute <> backRoute)
-    wizzard' steps curV curGraph@(WizzardChain mkStep graph) = do
+    wizzard' steps curV mstate curGraph@(WizzardChain mkStep graph) = do
       let step = mkStep curV
           curName = _wizzardStepName step
       pillsRoute <- wizzardHeader steps curName
       (nextE, backRoute, manualNextE, curValD) <- case _wizzardConfigControlPos of
         WizzardControlTop -> mdo
           (backRoute, nextE) <- wizzardControls steps curValD
-          (curValD, manualNextE) <- el "div" $ _wizzardStepBody step Nothing
+          (curValD, manualNextE) <- el "div" $ _wizzardStepBody step $ join $ fmap fromDynamic mstate
           pure (nextE, backRoute, manualNextE, curValD)
         WizzardControlBottom -> do
-          (curValD, manualNextE) <- el "div" $ _wizzardStepBody step Nothing
+          (curValD, manualNextE) <- el "div" $ _wizzardStepBody step $ join $ fmap fromDynamic mstate
           (backRoute, nextE) <- wizzardControls steps curValD
           pure (nextE, backRoute, manualNextE, curValD)
       let nextValE = leftmost [
               fmapMaybe id (current curValD `tag` nextE)
             , manualNextE
             ]
-      let myPill v = (curName, wizzard' steps curV curGraph)
-          nextRoute = Route $ (\v -> wizzard' (steps ++ [myPill v]) v graph) <$> nextValE
+      let myPill v = (curName, wizzard' steps curV (Just $ toDyn v) curGraph)
+          nextRoute = Route $ (\v -> wizzard' (steps ++ [myPill v]) v Nothing graph) <$> nextValE
       pure (never, nextRoute <> pillsRoute <> backRoute)
 
     wizzardHeader :: [PillData t m c] -> Text -> m (Route t m (Event t c))
