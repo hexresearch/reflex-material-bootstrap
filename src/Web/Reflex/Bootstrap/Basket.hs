@@ -30,12 +30,16 @@ class (Eq (BasketItemId a), Ord (BasketItemId a)) => BasketItem a where
 
 -- | Display collection of items and allow to delete them for user. Doesn't provide
 -- a pagination.
-basketList :: forall t m a . (MonadWidget t m, BasketItem a) => Event t a -> m (Dynamic t [a])
-basketList addE = renderBasketHeader (Proxy :: Proxy a) $ mdo
+basketList :: forall t m a . (MonadWidget t m, BasketItem a)
+  => [a] -- ^ Initial set of items
+  -> Event t a -- ^ Addition of new items
+  -> m (Dynamic t [a])
+basketList initItems addE = renderBasketHeader (Proxy :: Proxy a) $ mdo
   let addMapE, changeMapE :: Event t (Map (BasketItemId a) (Maybe a))
       addMapE = ffor addE $ \v -> M.singleton (basketElementId v) (Just v)
       changeMapE = addMapE <> delMapE
-  mapD :: Dynamic t (Map (BasketItemId a) (a, Event t ())) <- listWithKeyShallowDiff mempty changeMapE $ \_ v ev -> do
+      initMap = M.fromList $ fmap basketElementId initItems `zip` initItems
+  mapD :: Dynamic t (Map (BasketItemId a) (a, Event t ())) <- listWithKeyShallowDiff initMap changeMapE $ \_ v ev -> do
     delE <- renderBasketItem =<< holdDyn v ev
     pure (v, delE)
   let delMapE :: Event t (Map (BasketItemId a) (Maybe a))
