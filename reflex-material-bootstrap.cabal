@@ -1,5 +1,5 @@
 name:                reflex-material-bootstrap
-version:             0.1.0.0
+version:             0.2.0.0
 synopsis:            Frontend library for reactive bootstrap with material skin
 description:         Please see README.md
 homepage:            https://github.com/hexresearch/reports-manager
@@ -32,6 +32,7 @@ library
     Web.Reflex.Bootstrap.Tooltip
     Web.Reflex.Bootstrap.Upload.Input
     Web.Reflex.Bootstrap.Utils
+    Web.Reflex.Bootstrap.Wizzard
   default-language:    Haskell2010
   build-depends:
       base                    >= 4.7   && < 5

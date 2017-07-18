@@ -10,8 +10,6 @@ setup-info:
 
 packages:
 - '.'
-- '../../reflex-material-bootstrap'
-- '../reports-manager-api'
 - location:
     git: https://github.com/NCrashed/ghcjs-base
     commit: 89c2d2fd9683fe31efac585c58d1cd909a65ba88

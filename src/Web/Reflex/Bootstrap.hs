@@ -15,3 +15,4 @@ import Web.Reflex.Bootstrap.Table as Reexport
 import Web.Reflex.Bootstrap.Tabs as Reexport
 import Web.Reflex.Bootstrap.Tooltip as Reexport
 import Web.Reflex.Bootstrap.Utils as Reexport
+import Web.Reflex.Bootstrap.Wizzard as Reexport
