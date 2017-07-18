@@ -18,6 +18,7 @@ library
   hs-source-dirs:      src
   exposed-modules:
     Web.Reflex.Bootstrap
+    Web.Reflex.Bootstrap.Basket
     Web.Reflex.Bootstrap.Context
     Web.Reflex.Bootstrap.Focus
     Web.Reflex.Bootstrap.Form

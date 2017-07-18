@@ -2,6 +2,7 @@ module Web.Reflex.Bootstrap(
     module Reexport
   ) where
 
+import Web.Reflex.Bootstrap.Basket as Reexport
 import Web.Reflex.Bootstrap.Context as Reexport
 import Web.Reflex.Bootstrap.Focus as Reexport
 import Web.Reflex.Bootstrap.Form as Reexport
