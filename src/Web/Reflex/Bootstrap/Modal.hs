@@ -37,11 +37,11 @@ import Control.Lens.TH
 import Control.Monad
 import Control.Monad.IO.Class
 import Data.Default
+import Data.Functor
 import Data.JSString (pack)
 import Data.Monoid
 import Data.Text (Text)
-import GHCJS.Foreign.Callback
-import GHCJS.Types
+import Language.Javascript.JSaddle
 import Reflex.Dom
 
 import qualified Data.Map as Map
@@ -50,32 +50,67 @@ import qualified Data.Text as T
 import Web.Reflex.Bootstrap.Markup
 import Web.Reflex.Bootstrap.Utils
 
-foreign import javascript unsafe "$('#'+$1).modal({ backdrop: 'static', keyboard: false });" js_showModal :: JSString -> IO ()
-foreign import javascript unsafe "$('#'+$1).modal('hide');" js_hideModal :: JSString -> IO ()
-foreign import javascript unsafe "$('#'+$1).on('show.bs.modal',$2);" js_onModalShown :: JSString -> Callback (IO ()) -> IO ()
-foreign import javascript unsafe "$('#'+$1).off('show.bs.modal',$2);" js_offModalShown :: JSString -> Callback (IO ()) -> IO ()
-foreign import javascript unsafe "$('#'+$1).on('hide.bs.modal',$2);" js_onModalHidden :: JSString -> Callback (IO ()) -> IO ()
-foreign import javascript unsafe "$('#'+$1).off('hide.bs.modal',$2);" js_offModalHidden :: JSString -> Callback (IO ()) -> IO ()
+-- foreign import javascript unsafe "$('#'+$1).modal({ backdrop: 'static', keyboard: false });" js_showModal :: JSString -> IO ()
+js_showModal :: MonadJSM m => JSString -> m ()
+js_showModal x = liftJSM $ do
+  f <- eval ("function(x) { $('#'+x).modal({ backdrop: 'static', keyboard: false }); }" :: Text)
+  this <- obj
+  void $ call f obj (toJSVal x)
+
+-- foreign import javascript unsafe "$('#'+$1).modal('hide');" js_hideModal :: JSString -> IO ()
+js_hideModal :: MonadJSM m => JSString -> m ()
+js_hideModal x = liftJSM $ do
+  f <- eval ("function(x) { $('#'+x).modal('hide'); }" :: Text)
+  this <- obj
+  void $ call f obj (toJSVal x)
+
+-- foreign import javascript unsafe "$('#'+$1).on('show.bs.modal',$2);" js_onModalShown :: JSString -> Callback (IO ()) -> IO ()
+js_onModalShown :: MonadJSM m => JSString -> Function -> m ()
+js_onModalShown x cb = liftJSM $ do
+  f <- eval ("function(x, cb) { $('#'+x).on('show.bs.modal', cb); }" :: Text)
+  this <- obj
+  void $ call f obj (toJSVal x, toJSVal cb)
+
+-- foreign import javascript unsafe "$('#'+$1).off('show.bs.modal',$2);" js_offModalShown :: JSString -> Callback (IO ()) -> IO ()
+js_offModalShown :: MonadJSM m => JSString -> Function -> m ()
+js_offModalShown x cb = liftJSM $ do
+  f <- eval ("function(x, cb) { $('#'+x).off('show.bs.modal', cb); }" :: Text)
+  this <- obj
+  void $ call f obj (toJSVal x, toJSVal cb)
+
+-- foreign import javascript unsafe "$('#'+$1).on('hide.bs.modal',$2);" js_onModalHidden :: JSString -> Callback (IO ()) -> IO ()
+js_onModalHidden :: MonadJSM m => JSString -> Function -> m ()
+js_onModalHidden x cb = liftJSM $ do
+  f <- eval ("function(x, cb) { $('#'+x).on('hide.bs.modal', cb); }" :: Text)
+  this <- obj
+  void $ call f obj (toJSVal x, toJSVal cb)
+
+-- foreign import javascript unsafe "$('#'+$1).off('hide.bs.modal',$2);" js_offModalHidden :: JSString -> Callback (IO ()) -> IO ()
+js_offModalHidden :: MonadJSM m => JSString -> Function -> m ()
+js_offModalHidden x cb = liftJSM $ do
+  f <- eval ("function(x, cb) { $('#'+x).off('hide.bs.modal', cb); }" :: Text)
+  this <- obj
+  void $ call f obj (toJSVal x, toJSVal cb)
 
 -- | Unique modal id
 newtype ModalId = ModalId { unModalId :: Text }
   deriving (Eq, Show)
 
 -- | Show given modal
-showModal :: MonadIO m => ModalId -> m ()
-showModal (ModalId i) = liftIO $ js_showModal $ pack . T.unpack $ i
+showModal :: MonadJSM m => ModalId -> m ()
+showModal (ModalId i) = js_showModal $ pack . T.unpack $ i
 
 -- | Hide given modal
-hideModal :: MonadIO m => ModalId -> m ()
-hideModal (ModalId i) = liftIO $ js_hideModal $ pack . T.unpack $ i
+hideModal :: MonadJSM m => ModalId -> m ()
+hideModal (ModalId i) = js_hideModal $ pack . T.unpack $ i
 
 -- | Bind showing the modal on given event
 modalShowOn :: MonadWidget t m => ModalId -> Event t a -> m ()
-modalShowOn i e = performEvent_ (const (liftIO $ showModal i) <$> e)
+modalShowOn i e = performEvent_ (const (showModal i) <$> e)
 
 -- | Bind hiding the modal on given event
 modalHideOn :: MonadWidget t m => ModalId -> Event t a -> m ()
-modalHideOn i e = performEvent_ (const (liftIO $ hideModal i) <$> e)
+modalHideOn i e = performEvent_ (const (hideModal i) <$> e)
 
 -- | Holds prerequisites for modal creation
 data ModalConfig t = ModalConfig {
@@ -106,24 +141,24 @@ data Modal t a = Modal {
 }
 
 -- | Add callback when the modal is shown, returns teardown callback
-onModalShown :: MonadIO m => ModalId -> IO () -> m (IO ())
-onModalShown (ModalId i) f = liftIO $ do
+onModalShown :: MonadJSM m => ModalId -> IO () -> m (JSM ())
+onModalShown (ModalId i) f = liftJSM $ do
   let i' = pack . T.unpack $ i
-  c <- syncCallback ContinueAsync f
+  c <- asyncFunction $ \ _ _ _ -> liftIO f
   js_onModalShown i' c
   return $ do
     js_offModalShown i' c
-    releaseCallback c
+    freeFunction c
 
 -- | Add callback when the modal is hidden, returns teardown callback
-onModalHidden :: MonadIO m => ModalId -> IO () -> m (IO ())
-onModalHidden (ModalId i) f = liftIO $ do
+onModalHidden :: MonadJSM m => ModalId -> IO () -> m (JSM ())
+onModalHidden (ModalId i) f = liftJSM $ do
   let i' = pack . T.unpack $ i
-  c <- syncCallback ContinueAsync f
+  c <- asyncFunction $ \ _ _ _ -> liftIO f
   js_onModalHidden i' c
   return $ do
     js_offModalHidden i' c
-    releaseCallback c
+    freeFunction c
 
 -- | Make event that fires when the modal is shown
 makeModalShown :: MonadWidget t m => ModalId -> m (Event t ())

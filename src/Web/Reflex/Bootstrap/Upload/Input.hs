@@ -22,16 +22,17 @@ module Web.Reflex.Bootstrap.Upload.Input(
 
 import Control.Exception (finally)
 import Control.Monad.IO.Class
+import Data.Functor
 import Data.JSString (unpack)
 import Data.Map (Map)
 import Data.Monoid
 import Data.Text (Text)
 import GHC.Generics
 import GHCJS.Buffer
-import GHCJS.DOM.File (File, getName)
-import GHCJS.Foreign.Callback
 import GHCJS.Types (JSString, JSVal)
 import JavaScript.TypedArray.ArrayBuffer
+import JSDOM.File (File, getName)
+import Language.Javascript.JSaddle
 import Reflex
 import Reflex.Dom
 
@@ -74,21 +75,58 @@ newtype FileReader = FileReader JSVal
 -- | Typed wrapper around js event passed into load callback of FileReader
 newtype OnLoadEvent = OnLoadEvent JSVal
 
-foreign import javascript unsafe "$r = new FileReader();"
-  js_newFileReader :: IO FileReader
-foreign import javascript unsafe "$1.onload = $2;"
-  js_readerOnload :: FileReader -> Callback (JSVal -> IO ()) -> IO ()
-foreign import javascript unsafe "$r = $1.target.result;"
-  js_onLoadEventArrayBuffer :: OnLoadEvent -> IO ArrayBuffer
-foreign import javascript unsafe "$1.readAsArrayBuffer($2);"
-  js_readAsArrayBuffer :: FileReader -> File -> IO ()
+-- foreign import javascript unsafe "$r = new FileReader();"
+--   js_newFileReader :: IO FileReader
+js_newFileReader :: MonadJSM m => m FileReader
+js_newFileReader = fmap FileReader . liftJSM $ eval ("new FileReader()" :: Text)
 
-foreign import javascript unsafe "$r = $1.type;"
-  js_fileType :: File -> IO JSString
-foreign import javascript unsafe "$r = $1.size;"
-  js_fileSize :: File -> IO Word
-foreign import javascript unsafe "$r = $1.slice($2, $3);"
-  js_fileSlice :: File -> Word -> Word -> IO File
+-- foreign import javascript unsafe "$1.onload = $2;"
+--   js_readerOnload :: FileReader -> Callback (JSVal -> IO ()) -> IO ()
+js_readerOnload :: MonadJSM m => FileReader -> Function -> m ()
+js_readerOnload (FileReader r) cb = liftJSM $ do
+  f <- eval ("function(x, y) {x.onload = y}"  :: Text)
+  this <- obj
+  void $ call f this (r, toJSVal cb)
+
+-- foreign import javascript unsafe "$r = $1.target.result;"
+--   js_onLoadEventArrayBuffer :: OnLoadEvent -> IO ArrayBuffer
+js_onLoadEventArrayBuffer :: MonadJSM m => OnLoadEvent -> m MutableArrayBuffer
+js_onLoadEventArrayBuffer (OnLoadEvent e) = liftJSM $ do
+  f <- eval ("function(x) {return x.target.result;}" :: Text)
+  this <- obj
+  pFromJSVal <$> call f this e
+
+-- foreign import javascript unsafe "$1.readAsArrayBuffer($2);"
+--   js_readAsArrayBuffer :: FileReader -> File -> IO ()
+js_readAsArrayBuffer :: MonadJSM m => FileReader -> File -> m ()
+js_readAsArrayBuffer (FileReader r) file = liftJSM $ do
+  f <- eval ("function(x, y) {x.readAsArrayBuffer(y)}" :: Text)
+  this <- obj
+  void $ call f this (r, toJSVal file)
+
+-- foreign import javascript unsafe "$r = $1.type;"
+--   js_fileType :: File -> IO JSString
+js_fileType :: MonadJSM m => File -> m JSString
+js_fileType file = liftJSM $ do
+  f <- eval ("function(x) {return x.type}" :: Text)
+  this <- obj
+  fromJSValUnchecked =<< call f this (toJSVal file)
+
+-- foreign import javascript unsafe "$r = $1.size;"
+--   js_fileSize :: File -> IO Word
+js_fileSize :: MonadJSM m => File -> m Word
+js_fileSize file = liftJSM $ do
+  f <- eval ("function(x) {return x.size}" :: Text)
+  this <- obj
+  fromJSValUnchecked =<< call f this (toJSVal file)
+
+-- foreign import javascript unsafe "$r = $1.slice($2, $3);"
+--   js_fileSlice :: File -> Word -> Word -> IO File
+js_fileSlice :: MonadJSM m => File -> Word -> Word -> m File
+js_fileSlice file a b = liftJSM $ do
+  f <- eval ("function(x, y, z) {return x.slice(y, z)}" :: Text)
+  this <- obj
+  fromJSValUnchecked =<< call f this (toJSVal file, toJSVal a, toJSVal b)
 
 -- | Input for JSON file that is deserialised to specified type
 uploadJsonFileInput :: forall a t m . (A.FromJSON a, MonadWidget t m)
@@ -132,28 +170,34 @@ uploadFileInput UploadFileConfig{..} = do
   readUploadFiles files consume = mapM_ (readUploadFile consume) files
 
   readUploadFile :: (UploadFile t m -> IO ()) -> File -> WidgetHost m ()
-  readUploadFile consume f = liftIO $ do
+  readUploadFile consume f = do
     name <- T.pack . unpack <$> getName f
     ftype <- T.pack . unpack <$> js_fileType f
     size <- js_fileSize f
-    consume $ UploadFile {
+    liftIO $ consume $ UploadFile {
         uploadFileName = name
       , uploadFileType = ftype
       , uploadFileSize = size
       , uploadFileContent = contentGetter
       }
     where
+    contentGetter :: Event t (Word, Word) -> m (Event t BS.ByteString)
     contentGetter sliceE = performEventAsync $ ffor sliceE
-      $ \(start, end) consumeChunk -> liftIO $ do
+      $ \(start, end) consumeChunk -> liftJSM $ do
         f' <- js_fileSlice f start end
         reader <- js_newFileReader
-        rec c <- syncCallback1 ContinueAsync (onload c consumeChunk)
+        rec c <- asyncFunction $ \ _ _ [arg1] -> onload c consumeChunk arg1
         js_readerOnload reader c
         js_readAsArrayBuffer reader f'
 
-    onload c consumeChunk e = finally (releaseCallback c) $ do
-      contentsBuff <- js_onLoadEventArrayBuffer $ OnLoadEvent e
-      consumeChunk $ toByteString 0 Nothing $ createFromArrayBuffer contentsBuff
+    onload c consumeChunk e = do
+      contentsBuffM <- js_onLoadEventArrayBuffer $ OnLoadEvent e
+      contentsBuff <- unsafeFreeze contentsBuffM
+      buff <- ghcjsPure $ createFromArrayBuffer contentsBuff
+      bs <- ghcjsPure $ toByteString 0 Nothing buff
+      res <- liftIO $ consumeChunk bs
+      freeFunction c
+      pure res
 
 -- | Showcase for upload file input widget
 debugUploadFile :: forall t m . MonadWidget t m => m ()
