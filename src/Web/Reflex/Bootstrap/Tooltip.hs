@@ -7,14 +7,12 @@ module Web.Reflex.Bootstrap.Tooltip(
   ) where
 
 import Control.Monad.IO.Class
-import Data.Functor
 import Data.Text (Text)
 import GHC.Generics
 import Reflex
 import Reflex.Dom
 
-import qualified JSDOM.Types as DOM
-import Language.Javascript.JSaddle
+import qualified GHCJS.DOM.Types as DOM
 
 -- | Placement of tooltip relative to element
 data TooltipPlace = TooltipLeft | TooltipRight | TooltipBottom | TooltipTop
@@ -28,12 +26,7 @@ tooltipPlace p = case p of
   TooltipBottom -> "bottom"
   TooltipTop -> "top"
 
--- foreign import javascript unsafe "$($1).tooltip();" js_initTooltip :: DOM.Element -> IO ()
-js_initTooltip :: DOM.MonadJSM m => DOM.Element -> m ()
-js_initTooltip e = liftJSM $ do
-  f <- eval ("function(x) { $(x).tooltip(); }" :: String)
-  this <- obj
-  void $ call f this (toJSVal e)
+foreign import javascript unsafe "$($1).tooltip();" js_initTooltip :: DOM.Element -> IO ()
 
 -- | Initialize tooltip for element (raw element from 'el'' and 'elClass'')
 --
@@ -46,7 +39,7 @@ js_initTooltip e = liftJSM $ do
 -- </script>
 --
 initTooltip :: MonadWidget t m => Element EventResult (DomBuilderSpace m) t -> m ()
-initTooltip Element{..} = js_initTooltip _element_raw
+initTooltip Element{..} = liftIO $ js_initTooltip _element_raw
 
 -- | Create clickable link with subcontent and tooltip
 hrefTooltip :: MonadWidget t m => TooltipPlace -> Text -> m a -> m (Event t ())

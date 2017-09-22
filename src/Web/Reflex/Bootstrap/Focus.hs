@@ -4,35 +4,21 @@ module Web.Reflex.Bootstrap.Focus(
   ) where
 
 import Control.Monad.IO.Class
-import Data.Functor
-import Data.Text (Text)
-import Language.Javascript.JSaddle
-import qualified JSDOM.Types as DOM
+import qualified GHCJS.DOM.Types as DOM
 import Reflex.Dom
 
--- foreign import javascript unsafe "$1.focus()" js_focus :: DOM.Element -> IO ()
-js_focus :: MonadJSM m => DOM.Element -> m ()
-js_focus e = liftJSM $ do
-  f <- eval ("function(x) {x.focus()}" :: Text)
-  this <- obj
-  void $ call f this (toJSVal e)
-
--- foreign import javascript unsafe "$1.scrollIntoView()" js_scrollIntoView :: DOM.Element -> IO ()
-js_scrollIntoView :: MonadJSM m => DOM.Element -> m ()
-js_scrollIntoView e = liftJSM $ do
-  f <- eval ("function(x) {x.scrollIntoView()}" :: Text)
-  this <- obj
-  void $ call f this (toJSVal e)
+foreign import javascript unsafe "$1.focus()" js_focus :: DOM.Element -> IO ()
+foreign import javascript unsafe "$1.scrollIntoView()" js_scrollIntoView :: DOM.Element -> IO ()
 
 -- | Focus element given in event payload
 focusElementRaw :: forall t m . MonadWidget t m => Event t DOM.Element -> m ()
-focusElementRaw e = performEvent_ . ffor e $ \v -> do
+focusElementRaw e = performEvent_ . ffor e $ \v -> liftIO $ do
   js_focus v
   js_scrollIntoView v
 
 -- | Scroll element given in event payload
 scrollElementRaw :: forall t m . MonadWidget t m => Event t DOM.Element -> m ()
-scrollElementRaw e = performEvent_ . ffor e $ js_scrollIntoView
+scrollElementRaw e = performEvent_ . ffor e $ liftIO . js_scrollIntoView
 
 -- | Overloaded focus setter
 class FocusElement a where
