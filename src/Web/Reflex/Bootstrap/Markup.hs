@@ -21,6 +21,7 @@ module Web.Reflex.Bootstrap.Markup(
   , icon
   , well
   , href
+  , hrefClass
   , primaryButton
   ) where
 
@@ -116,6 +117,12 @@ well = elClass "div" "well"
 href :: MonadWidget t m => m a -> m (Event t ())
 href ma = do
   (l,_) <- elAttr' "a" [("href", "#"), ("onclick", "return false;")] ma
+  return $ domEvent Click l
+
+-- | Create clickable link with subcontent
+hrefClass :: MonadWidget t m => Text -> m a -> m (Event t ())
+hrefClass cl ma = do
+  (l,_) <- elAttr' "a" [("class", cl), ("href", "#"), ("onclick", "return false;")] ma
   return $ domEvent Click l
 
 -- | The most common bootstrap style for button

@@ -43,32 +43,36 @@ menuWidget prox initialItem items = fmap (switch . current) . route $ mdo
   pure r
   where
   menuBar :: Event t (MenuItem a) -> MenuItem a -> m (Event t (), Route t m (Event t ()))
-  menuBar nextE currItem = divClass "navbar navbar-default" $ divClass "container-fluid" $ do
-    divClass "navbar-header" $ do
-      elAttr "button" [
-          ("type", "button")
-        , ("class", "navbar-toggle")
-        , ("data-toggle", "collapse")
-        , ("data-target", ".navbar-inverse-control")
-        ] $ do
-        replicateM_ 3 $ spanClass "icon-bar" $ return ()
-      elAttr "a" [
-          ("class", "navbar-brand")
-        , ("href", "javascript:void(0)")
-        ] $ text $ menuBrand prox
-    divClass "navbar-collapse collapse navbar-inverse-collapse" $ do
-      ulClass "nav navbar-nav" $ mdo
+  menuBar nextE currItem = divClass "navbar navbar-expand-lg navbar-dark fixed-top bg-dark" $ do
+    -- Brand
+    elAttr "a" [
+        ("class", "navbar-brand")
+      , ("href", "#")
+      ] $ text $ menuBrand prox
+    -- Mobile menu toggler
+    elAttr "button" [
+        ("class", "navbar-toggler")
+      , ("type", "button")
+      , ("data-toggle", "collapse")
+      , ("data-target", "#navbarSupportedContent")
+      , ("aria-controls", "navbarSupportedContent")
+      , ("aria-expanded", "false")
+      , ("aria-label", "Toggle navigation")
+      ] $ spanClass "navbar-toggler-icon" $ pure ()
+    -- Content
+    elAttr "div" [("class", "collapse navbar-collapse"), ("id", "navbarSupportedContent")] $ do
+      ulClass "navbar-nav mr-auto" $ mdo
         routes <- forM (M.toList items) $ \(name, m) -> if name == currItem
-          then liClass "active" $ do
-            _ <- link $ menuItemLabel prox name
+          then liClass "nav-item active" $ do
+            _ <- flip linkClass "nav-link" $ menuItemLabel prox name
             pure $ Route never
-          else li $ do
-            e <- href . text $ menuItemLabel prox name
+          else liClass "nav-item" $ do
+            e <- hrefClass "nav-link" . text $ menuItemLabel prox name
             pure $ Route . ffor e $ const $ mdo
               r <- menuBar e name
               e <- m
               pure r
-        logoutE <- li . href . text $ menuLogoutLabel prox
+        logoutE <- li . hrefClass "nav-link" . text $ menuLogoutLabel prox
         -- Route for event when current widget want to change page
         let manualRoute = Route . fforMaybe nextE $ \name -> case M.lookup name items of
               Nothing -> Nothing
