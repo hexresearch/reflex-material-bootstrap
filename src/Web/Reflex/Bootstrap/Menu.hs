@@ -72,7 +72,7 @@ menuWidget prox initialItem items = fmap (switch . current) . route $ mdo
               r <- menuBar e name
               e <- m
               pure r
-        logoutE <- li . hrefClass "nav-link" . text $ menuLogoutLabel prox
+        logoutE <- liClass "nav-item" . hrefClass "nav-link" . text $ menuLogoutLabel prox
         -- Route for event when current widget want to change page
         let manualRoute = Route . fforMaybe nextE $ \name -> case M.lookup name items of
               Nothing -> Nothing
