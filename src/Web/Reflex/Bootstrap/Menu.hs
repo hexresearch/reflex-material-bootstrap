@@ -43,7 +43,7 @@ menuWidget prox initialItem items = fmap (switch . current) . route $ mdo
   pure r
   where
   menuBar :: Event t (MenuItem a) -> MenuItem a -> m (Event t (), Route t m (Event t ()))
-  menuBar nextE currItem = divClass "navbar navbar-expand-lg navbar-dark fixed-top bg-dark" $ do
+  menuBar nextE currItem = divClass "navbar navbar-expand-lg navbar-dark fixed-top bg-dark justify-content-between" $ do
     -- Brand
     elAttr "a" [
         ("class", "navbar-brand")
@@ -60,9 +60,9 @@ menuWidget prox initialItem items = fmap (switch . current) . route $ mdo
       , ("aria-label", "Toggle navigation")
       ] $ spanClass "navbar-toggler-icon" $ pure ()
     -- Content
-    elAttr "div" [("class", "collapse navbar-collapse"), ("id", "navbarSupportedContent")] $ do
-      ulClass "navbar-nav mr-auto" $ mdo
-        routes <- forM (M.toList items) $ \(name, m) -> if name == currItem
+    elAttr "div" [("class", "collapse navbar-collapse"), ("id", "navbarSupportedContent")] $ mdo
+      routes <- ulClass "navbar-nav mr-auto" $ mdo
+        forM (M.toList items) $ \(name, m) -> if name == currItem
           then liClass "nav-item active" $ do
             _ <- flip linkClass "nav-link" $ menuItemLabel prox name
             pure $ Route never
@@ -72,12 +72,12 @@ menuWidget prox initialItem items = fmap (switch . current) . route $ mdo
               r <- menuBar e name
               e <- m
               pure r
-        logoutE <- liClass "nav-item" . hrefClass "nav-link" . text $ menuLogoutLabel prox
-        -- Route for event when current widget want to change page
-        let manualRoute = Route . fforMaybe nextE $ \name -> case M.lookup name items of
-              Nothing -> Nothing
-              Just m -> Just $ mdo
-                r <- menuBar e name
-                e <- m
-                pure r
-        pure (logoutE, manualRoute <> mconcat routes)
+      logoutE <- hrefClass "nav-link" . text $ menuLogoutLabel prox
+      -- Route for event when current widget want to change page
+      let manualRoute = Route . fforMaybe nextE $ \name -> case M.lookup name items of
+            Nothing -> Nothing
+            Just m -> Just $ mdo
+              r <- menuBar e name
+              e <- m
+              pure r
+      pure (logoutE, manualRoute <> mconcat routes)
