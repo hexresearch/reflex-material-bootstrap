@@ -12,12 +12,17 @@ module Web.Reflex.Bootstrap.Markup(
   , container
   , panel
   , row
+  , md1
   , md2
   , md3
   , md4
   , md5
   , md6
   , md7
+  , md8
+  , md9
+  , md10
+  , md11
   , icon
   , well
   , href
@@ -87,6 +92,9 @@ panel = elClass "div" "panel"
 row :: MonadWidget t m => m a -> m a
 row = elClass "div" "row"
 
+md1 :: MonadWidget t m => m a -> m a
+md1 = elClass "div" "col-md-1"
+
 md2 :: MonadWidget t m => m a -> m a
 md2 = elClass "div" "col-md-2"
 
@@ -104,6 +112,18 @@ md6 = elClass "div" "col-md-6"
 
 md7 :: MonadWidget t m => m a -> m a
 md7 = elClass "div" "col-md-7"
+
+md8 :: MonadWidget t m => m a -> m a
+md8 = elClass "div" "col-md-8"
+
+md9 :: MonadWidget t m => m a -> m a
+md9 = elClass "div" "col-md-9"
+
+md10 :: MonadWidget t m => m a -> m a
+md10 = elClass "div" "col-md-10"
+
+md11 :: MonadWidget t m => m a -> m a
+md11 = elClass "div" "col-md-11"
 
 -- | Embedd icon
 icon :: MonadWidget t m => Text -> m ()
