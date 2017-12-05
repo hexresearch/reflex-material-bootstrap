@@ -10,6 +10,7 @@ module Web.Reflex.Bootstrap.Markup(
   , centered
   , strutWidgetY
   , container
+  , containerFluid
   , panel
   , row
   , md1
@@ -23,6 +24,12 @@ module Web.Reflex.Bootstrap.Markup(
   , md9
   , md10
   , md11
+  , h1
+  , h2
+  , h3
+  , h4
+  , h5
+  , h6
   , icon
   , well
   , href
@@ -83,8 +90,9 @@ strutWidgetY :: MonadWidget t m => Text -- ^ Size parameter, ex "10px"
   -> m ()
 strutWidgetY size = elAttr "div" [("style", "margin-top: " <> size <> ";")] $ return ()
 
-container :: MonadWidget t m => m a -> m a
+container, containerFluid :: MonadWidget t m => m a -> m a
 container = elClass "div" "container"
+containerFluid = elClass "div" "container-fluid"
 
 panel :: MonadWidget t m => m a -> m a
 panel = elClass "div" "panel"
@@ -128,6 +136,15 @@ md11 = elClass "div" "col-md-11"
 -- | Embedd icon
 icon :: MonadWidget t m => Text -> m ()
 icon name = elClass "i" "material-icons" $ text name
+
+-- | Wrap in corresponding h tag
+h1, h2, h3, h4, h5, h6 :: MonadWidget t m => m a -> m a
+h1 = el "h1"
+h2 = el "h2"
+h3 = el "h3"
+h4 = el "h4"
+h5 = el "h5"
+h6 = el "h6"
 
 -- | Bootstrap well panel
 well :: MonadWidget t m => m a -> m a
