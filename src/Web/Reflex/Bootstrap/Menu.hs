@@ -29,6 +29,10 @@ class (Ord (MenuItem a), Eq (MenuItem a)) => MenuWidget a where
   -- | Which label to use for logout button
   menuLogoutLabel :: Proxy a -> Text
 
+  -- | Additional classes that should be added to the generated navbar
+  menuBarClasses :: Proxy a -> Text
+  menuBarClasses _ = "navbar-expand-lg navbar-dark bg-dark justify-content-between"
+
 -- | Create menu widget that switches over pages of the app
 menuWidget :: forall t m a . (MonadWidget t m, MenuWidget a)
   => Proxy a
@@ -43,7 +47,7 @@ menuWidget prox initialItem items = fmap (switch . current) . route $ mdo
   pure r
   where
   menuBar :: Event t (MenuItem a) -> MenuItem a -> m (Event t (), Route t m (Event t ()))
-  menuBar nextE currItem = divClass "navbar navbar-expand-lg navbar-dark fixed-top bg-dark justify-content-between" $ do
+  menuBar nextE currItem = divClass ("navbar " <> menuBarClasses prox) $ do
     -- Brand
     elAttr "a" [
         ("class", "navbar-brand")
