@@ -42,29 +42,33 @@ initTooltip :: MonadWidget t m => Element EventResult (DomBuilderSpace m) t -> m
 initTooltip Element{..} = liftIO $ js_initTooltip _element_raw
 
 -- | Create clickable link with subcontent and tooltip
-hrefTooltip :: MonadWidget t m => TooltipPlace -> Text -> m a -> m (Event t ())
-hrefTooltip place label ma = do
-  (l,_) <- elAttr' "a" [
-      ("href", "#")
-    , ("onclick", "return false;")
-    , ("data-toggle", "tooltip")
-    , ("data-placement", tooltipPlace place)
-    , ("title", "")
-    , ("data-original-title", label)
-    ] ma
+hrefTooltip :: MonadWidget t m => TooltipPlace -> Dynamic t Text -> m a -> m (Event t ())
+hrefTooltip place labelD ma = do
+  (l,_) <- elDynAttr' "a" (do
+    label <- labelD
+    pure [
+        ("href", "#")
+      , ("onclick", "return false;")
+      , ("data-toggle", "tooltip")
+      , ("data-placement", tooltipPlace place)
+      , ("title", "")
+      , ("data-original-title", label)
+      ]) ma
   initTooltip l
   return $ domEvent Click l
 
 -- | Create clickable link with subcontent and tooltip
-btnTooltip :: MonadWidget t m => TooltipPlace -> Text -> m a -> m (Event t ())
-btnTooltip place label ma = do
-  (l,_) <- elAttr' "button" [
-      ("type", "button")
-    , ("class", "btn btn-default")
-    , ("data-toggle", "tooltip")
-    , ("data-placement", tooltipPlace place)
-    , ("title", "")
-    , ("data-original-title", label)
-    ] ma
+btnTooltip :: MonadWidget t m => TooltipPlace -> Dynamic t Text -> m a -> m (Event t ())
+btnTooltip place labelD ma = do
+  (l,_) <- elDynAttr' "button" (do
+    label <- labelD
+    pure [
+        ("type", "button")
+      , ("class", "btn btn-default")
+      , ("data-toggle", "tooltip")
+      , ("data-placement", tooltipPlace place)
+      , ("title", "")
+      , ("data-original-title", label)
+      ]) ma
   initTooltip l
   return $ domEvent Click l
