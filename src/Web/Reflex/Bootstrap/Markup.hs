@@ -163,7 +163,7 @@ hrefClass cl ma = do
   return $ domEvent Click l
 
 -- | The most common bootstrap style for button
-primaryButton :: MonadWidget t m => Text -> m (Event t ())
-primaryButton s = do
-  (e, _) <- elAttr' "a" [("class", "btn btn-raised btn-primary"), ("href", "javascript:void(0)")] $ text s
+primaryButton :: MonadWidget t m => Dynamic t Text -> m (Event t ())
+primaryButton sd = do
+  (e, _) <- elAttr' "a" [("class", "btn btn-raised btn-primary"), ("href", "javascript:void(0)")] $ dynText sd
   return $ domEvent Click e

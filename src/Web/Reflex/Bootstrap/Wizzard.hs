@@ -51,17 +51,17 @@ data WizzardControlPos = WizzardControlTop | WizzardControlBottom
   deriving (Generic, Eq, Ord, Enum, Bounded, Show, Read)
 
 -- | Global configuration for wizzard widget
-data WizzardConfig = WizzardConfig {
-  _wizzardConfigNextLabel  :: Text -- ^ Label for Next button
-, _wizzardConfigBackLabel  :: Text -- ^ Label for Prev button
+data WizzardConfig t = WizzardConfig {
+  _wizzardConfigNextLabel  :: Dynamic t Text -- ^ Label for Next button
+, _wizzardConfigBackLabel  :: Dynamic t Text -- ^ Label for Prev button
 , _wizzardConfigControlPos :: WizzardControlPos -- ^ Define position for control (Next and Back) buttons
 }
 makeLenses ''WizzardConfig
 
-instance Default WizzardConfig where
+instance Reflex t => Default (WizzardConfig t) where
   def = WizzardConfig {
-      _wizzardConfigNextLabel = "Next"
-    , _wizzardConfigBackLabel = "Back"
+      _wizzardConfigNextLabel = pure "Next"
+    , _wizzardConfigBackLabel = pure "Back"
     , _wizzardConfigControlPos = WizzardControlBottom
     }
 
@@ -70,7 +70,7 @@ type PillData t m a = (Text, m (Event t a, Route t m (Event t a)))
 
 -- | Create wizzard from given wizzard step DSL, fire event on last screen with
 -- result of last widget.
-wizzard :: forall t m a . MonadWidget t m => WizzardConfig -> WizzardGraph t m () a -> m (Event t a)
+wizzard :: forall t m a . MonadWidget t m => WizzardConfig t -> WizzardGraph t m () a -> m (Event t a)
 wizzard WizzardConfig{..} = fmap switchPromptlyDyn . route . wizzard' [] () Nothing
   where
     wizzard' :: forall b c . [PillData t m c] -> b -> Maybe D.Dynamic -> WizzardGraph t m b c -> m (Event t c, Route t m (Event t c))
@@ -134,12 +134,12 @@ wizzard WizzardConfig{..} = fmap switchPromptlyDyn . route . wizzard' [] () Noth
       pure (backRoute, nextE)
 
 -- | Primary button with disable flag
-primaryRightButtonDisable :: MonadWidget t m => Text -> Dynamic t Bool -> m (Event t ())
+primaryRightButtonDisable :: MonadWidget t m => Dynamic t Text -> Dynamic t Bool -> m (Event t ())
 primaryRightButtonDisable s enableD = fmap switchPromptlyDyn . widgetHoldDyn $ ffor enableD $ \v -> if v
   then do
-    (e, _) <- elAttr' "a" [("class", "btn btn-raised pull-right btn-primary"), ("href", "javascript:void(0)")] $ text s
+    (e, _) <- elAttr' "a" [("class", "btn btn-raised pull-right btn-primary"), ("href", "javascript:void(0)")] $ dynText s
     return $ domEvent Click e
   else do
     elAttr "fieldset" [("disabled", "")] $ do
-      elAttr "a" [("class", "btn btn-raised pull-right btn-primary"), ("href", "javascript:void(0)")] $ text s
+      elAttr "a" [("class", "btn btn-raised pull-right btn-primary"), ("href", "javascript:void(0)")] $ dynText s
       pure never
