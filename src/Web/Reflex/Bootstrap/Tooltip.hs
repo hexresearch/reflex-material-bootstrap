@@ -3,6 +3,7 @@ module Web.Reflex.Bootstrap.Tooltip(
   , tooltipPlace
   , initTooltip
   , hrefTooltip
+  , simpleTooltip
   , btnTooltip
   ) where
 
@@ -56,6 +57,20 @@ hrefTooltip place labelD ma = do
       ]) ma
   initTooltip l
   return $ domEvent Click l
+
+-- | Create wrapper that raises tooltiop
+simpleTooltip :: MonadWidget t m => TooltipPlace -> Dynamic t Text -> m a -> m a
+simpleTooltip place labelD ma = do
+  (l, a) <- elDynAttr' "div" (do
+    label <- labelD
+    pure [
+        ("data-toggle", "tooltip")
+      , ("data-placement", tooltipPlace place)
+      , ("title", "")
+      , ("data-original-title", label)
+      ]) ma
+  initTooltip l
+  pure a
 
 -- | Create clickable link with subcontent and tooltip
 btnTooltip :: MonadWidget t m => TooltipPlace -> Dynamic t Text -> m a -> m (Event t ())
