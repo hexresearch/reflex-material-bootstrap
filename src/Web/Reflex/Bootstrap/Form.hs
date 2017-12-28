@@ -58,7 +58,7 @@ formGroupJson :: forall t m a . (FromJSON a, MonadWidget t m)
 formGroupJson labelTextD cfg = formGroup $ do
   initialLabel <- sample . current $ labelTextD
   mkLabel [ ("for", elemId initialLabel)
-          , ("class", "col-md-2 control-label")] $ dynText labelTextD
+          , ("class", "col-md-12 control-label")] $ dynText labelTextD
   elClass "div" "col-md-12" $ do
     rec
       _ <- textInput def {
@@ -86,7 +86,7 @@ formGroupJson labelTextD cfg = formGroup $ do
 -- | Wrap with a form group label
 formGroupLabel :: MonadWidget t m => Dynamic t Text -> m a -> m a
 formGroupLabel labelTextD ma = formGroup $ do
-  mkLabel [ ("class", "col-md-2 control-label")] $ dynText labelTextD
+  mkLabel [ ("class", "col-md-12 control-label")] $ dynText labelTextD
   elClass "div" "col-md-12" ma
   where
     formGroup = elClass "div" "form-group"
@@ -97,7 +97,7 @@ formGroupText :: MonadWidget t m => Dynamic t Text -> TextInputConfig t -> m (Te
 formGroupText labelTextD cfg = formGroup $ do
   initialLabel <- sample . current $ labelTextD
   mkLabel [ ("for", elemId initialLabel)
-          , ("class", "col-md-2 control-label")] $ dynText labelTextD
+          , ("class", "col-md-12 control-label")] $ dynText labelTextD
   elClass "div" "col-md-12" $ textInput cfg {
       _textInputConfig_attributes = constDyn [
           ("class", "form-control")
@@ -115,7 +115,7 @@ formGroupStatic :: MonadWidget t m => Dynamic t Text -> Dynamic t Text -> m (Tex
 formGroupStatic labelTextD valD = formGroup $ do
   initialLabel <- sample . current $ labelTextD
   mkLabel [ ("for", elemId initialLabel)
-          , ("class", "col-md-2 control-label")] $ dynText labelTextD
+          , ("class", "col-md-12 control-label")] $ dynText labelTextD
   v <- sample $ current valD
   elClass "div" "col-md-12" $ textInput TextInputConfig {
       _textInputConfig_setValue = updated valD
@@ -140,7 +140,7 @@ formGroupSelect :: (MonadWidget t m, Ord k, Show k, Read k) => Dynamic t Text ->
 formGroupSelect labelTextD initKey vals cfg = formGroup $ do
   initialLabel <- sample . current $ labelTextD
   mkLabel [ ("for", elemId initialLabel)
-          , ("class", "col-md-2 control-label")] $ dynText labelTextD
+          , ("class", "col-md-12 control-label")] $ dynText labelTextD
   elClass "div" "col-md-12" $ dropdown initKey vals cfg {
       _dropdownConfig_attributes = do
         atrs <- _dropdownConfig_attributes cfg
@@ -173,7 +173,7 @@ formGroupInt :: MonadWidget t m => Dynamic t Text -> IntInputConfig t -> m (Dyna
 formGroupInt labelTextD IntInputConfig{..} = formGroup $ do
   initialLabel <- sample . current $ labelTextD
   mkLabel [ ("for", elemId initialLabel)
-          , ("class", "col-md-2 control-label")] $ dynText labelTextD
+          , ("class", "col-md-12 control-label")] $ dynText labelTextD
   tinput <- elClass "div" "col-md-12" $ textInput TextInputConfig {
       _textInputConfig_inputType    = "number"
     , _textInputConfig_initialValue = showt intInputInitVal

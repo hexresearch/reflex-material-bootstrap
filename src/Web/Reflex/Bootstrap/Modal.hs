@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Web.Reflex.Bootstrap.Modal(
     modal
   , simpleModal
@@ -80,7 +81,7 @@ modalHideOn i e = performEvent_ (const (liftIO $ hideModal i) <$> e)
 -- | Holds prerequisites for modal creation
 data ModalConfig t = ModalConfig {
   _modalCfgDismiss  :: !Bool -- ^ Use dismiss button
-, _modalCfgTitle    :: !Text -- ^ Display modal title
+, _modalCfgTitle    :: !(Dynamic t Text) -- ^ Display modal title
 , _modalCfgShow     :: Event t () -- ^ When to show the modal
 , _modalCfgHideBody :: !Bool -- ^ Should render full body widget
 }
@@ -91,7 +92,7 @@ $(makeLenses ''ModalConfig)
 defaultModalCfg :: Reflex t => ModalConfig t
 defaultModalCfg = ModalConfig {
     _modalCfgDismiss = True
-  , _modalCfgTitle = "Modal title"
+  , _modalCfgTitle = pure "Modal title"
   , _modalCfgShow = never
   , _modalCfgHideBody = False
   }
@@ -183,32 +184,32 @@ modal ModalConfig{..} bodyWidget footerWidget = do
             elAttr "span" (Map.singleton "aria-hidden" "true") $ text "×"
         return $ const Nothing <$> domEvent Click e
       else return never
-    elClass "h4" "modal-title" $ text _modalCfgTitle
+    elClass "h4" "modal-title" $ dynText _modalCfgTitle
     return closeEv
 
 -- | Help to create modal cancel button
-cancelModalBtn :: MonadWidget t m => Text -> m (Event t ())
+cancelModalBtn :: MonadWidget t m => Dynamic t Text -> m (Event t ())
 cancelModalBtn title = do
   (e, _) <- elAttr' "button" (Map.fromList
     [ ("type", "button")
     , ("class", "btn btn-default")
     , ("data-dismiss", "modal")
-    ]) $ text title
+    ]) $ dynText title
   return $ domEvent Click e
 
 -- | Help to create modal accept button
-acceptModalBtn :: MonadWidget t m => Text -> m (Event t ())
+acceptModalBtn :: MonadWidget t m => Dynamic t Text -> m (Event t ())
 acceptModalBtn title = do
   (e, _) <- elAttr' "button" (Map.fromList
     [ ("type", "button")
     , ("class", "btn btn-primary")
-    ]) $ text title
+    ]) $ dynText title
   return $ domEvent Click e
 
 -- | Holds prerequisites for modal creation
 data SimpleModalConfig t = SimpleModalConfig {
-  _simpleModalConfigAcceptTitle :: !Text -- ^ Display for OK button
-, _simpleModalConfigCancelTitle :: !Text -- ^ Display for Cancel button
+  _simpleModalConfigAcceptTitle :: !(Dynamic t Text) -- ^ Display for OK button
+, _simpleModalConfigCancelTitle :: !(Dynamic t Text) -- ^ Display for Cancel button
 , _simpleModalConfigModalCfg :: !(ModalConfig t) -- ^ More general config
 }
 
@@ -217,8 +218,8 @@ $(makeFields ''SimpleModalConfig)
 -- | Default values for modal config
 defaultSimpleModalCfg :: Reflex t => SimpleModalConfig t
 defaultSimpleModalCfg = SimpleModalConfig {
-    _simpleModalConfigAcceptTitle = "OK"
-  , _simpleModalConfigCancelTitle = "Cancel"
+    _simpleModalConfigAcceptTitle = pure "OK"
+  , _simpleModalConfigCancelTitle = pure "Cancel"
   , _simpleModalConfigModalCfg = defaultModalCfg
   }
 
@@ -241,9 +242,9 @@ simpleModal SimpleModalConfig{..} body = modal _simpleModalConfigModalCfg (const
 
 -- | Configuration of confirm modal
 data ConfirmConfig t = ConfirmConfig {
-  _confirmConfigTitle :: !Text -- ^ Display modal title
-, _confirmConfigAcceptTitle :: !Text -- ^ String on OK button
-, _confirmConfigCancelTitle :: !Text -- ^ String on Cancel button
+  _confirmConfigTitle :: !(Dynamic t Text) -- ^ Display modal title
+, _confirmConfigAcceptTitle :: !(Dynamic t Text) -- ^ String on OK button
+, _confirmConfigCancelTitle :: !(Dynamic t Text) -- ^ String on Cancel button
 }
 
 $(makeFields ''ConfirmConfig)
@@ -251,9 +252,9 @@ $(makeFields ''ConfirmConfig)
 -- | Default configuration for confirm modal
 defaultConfirmConfig :: Reflex t => ConfirmConfig t
 defaultConfirmConfig = ConfirmConfig {
-    _confirmConfigTitle = "Вы уверены?"
-  , _confirmConfigAcceptTitle = "Да"
-  , _confirmConfigCancelTitle = "Отмена"
+    _confirmConfigTitle = pure "Вы уверены?"
+  , _confirmConfigAcceptTitle = pure "Да"
+  , _confirmConfigCancelTitle = pure "Отмена"
   }
 
 instance Reflex t => Default (ConfirmConfig t) where
@@ -286,7 +287,7 @@ confirm ConfirmConfig{..} ea = fmapMaybe id . modalValue <$> modal mcfg (const b
 
 -- | Create modal with "OK" button with desired widget inside.
 infoModal :: forall t m a . (MonadWidget t m)
-  => Text -- ^ Title
+  => Dynamic t Text -- ^ Title
   -> Event t (m a) -- ^ Widget that should be placed in modal
   -> m (Event t a) -- ^ Fires when user close the modal
 infoModal titleLabel ea =
@@ -304,7 +305,7 @@ infoModal titleLabel ea =
 
   footer :: ModalId -> a -> m (Event t (Maybe a))
   footer i a = do
-    acceptEv <- acceptModalBtn "OK"
+    acceptEv <- acceptModalBtn $ pure "OK"
     modalHideOn i acceptEv
     return $ const (Just a) <$> acceptEv
 
