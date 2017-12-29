@@ -18,6 +18,7 @@ authForm = horizontalForm $ do
 -}
 module Web.Reflex.Bootstrap.Form(
     horizontalForm
+  , horizontalFormEnter
   , formGroupStatic
   , formGroupText
   , formGroupInt
@@ -32,6 +33,7 @@ module Web.Reflex.Bootstrap.Form(
 import Data.Aeson
 import Data.Bifunctor
 import Data.Default
+import Data.Functor
 import Data.Map.Strict (Map)
 import Data.Monoid
 import Data.Text
@@ -48,7 +50,21 @@ horizontalForm :: MonadWidget t m => m a -> m a
 horizontalForm = elAttr "form" [
     ("class", "form-horizontal")
   , ("accept-charset", "UTF-8")
+  , ("onSubmit", "return false;")
   ]
+
+-- | Wrapper for bootstrap horizontal form, event is fired on submit.
+horizontalFormEnter :: forall t m a . MonadWidget t m => m a -> m (a, Event t ())
+horizontalFormEnter ma = do
+  (element, a) <- elAttr' "form" [
+      ("class", "form-horizontal")
+    , ("accept-charset", "UTF-8")
+    , ("onSubmit", "return false;")
+    ] ma
+  -- handle enter
+  let enterCode = 13
+      enterE = ffilter (== enterCode) $ domEvent Keydown element :: Event t Word
+  pure (a, void enterE)
 
 -- | Helper to create bootstrap text input with label
 formGroupJson :: forall t m a . (FromJSON a, MonadWidget t m)
